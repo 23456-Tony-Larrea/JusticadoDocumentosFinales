@@ -38,6 +38,9 @@ export class HojaDeVidaComponent implements OnInit {
   m;
   invitado;
   loading: boolean;
+  documento: any;
+  editable: boolean;
+  blobPdf: Blob;
   constructor(private formBuilder: FormBuilder,
     public datepipe: DatePipe,
     public service: ServicioService,
@@ -89,9 +92,9 @@ export class HojaDeVidaComponent implements OnInit {
     this.usuario.codigoUser = x.codigo_user;
     this.resume.idUsuario = this.usuario.id;
     this.resume.codigoUsuario = this.usuario.codigoUser;
-    //console.log(this.usuario.id, this.usuario.codigoUser);
-    //console.log('user_string_:', user_string);
-    console.log('usuario.id_:', this.usuario);
+    let doc_string = localStorage.getItem("currentDoc");
+    let doc = JSON.parse(doc_string);
+    this.documento = doc;
 
   }
   obtenerFecha() {
@@ -439,42 +442,6 @@ export class HojaDeVidaComponent implements OnInit {
       })
     }
   }
-  visualizarPdf(){
-    const defenicionSolicitud = this.getDocumentDefinition();
-    const pdf:Object = pdfMake.createPdf(defenicionSolicitud).open();
-    console.log('visualizarPdf()_: ',pdf);
-  }
-    /*  generarPdf(accion = 'open') {
-     const defenicionSolicitud = this.getDefinicionSolicitud();
-     switch (accion) {
-       case 'open': pdfMake.createPdf(defenicionSolicitud).open(); break;
-       case 'print': pdfMake.createPdf(defenicionSolicitud).print(); break;
-       case 'download': pdfMake.createPdf(defenicionSolicitud).download(); break;
-       default: pdfMake.createPdf(defenicionSolicitud).open(); break
-     }
- 
-   } */
-   publicar() {
-    const formData = new FormData();
-    const defenicionSolicitud = this.getDocumentDefinition();
-    const pdf = pdfMake.createPdf(defenicionSolicitud);
-    const blob = new Blob([pdf], { type: 'application/octet-stream' });
-    //console.log('metodo_obtenerPdf()_:', blob);
-    formData.append("upload", blob);
-    formData.append("codDoc", this.hdvCodigoUsuario);
-    formData.append("codUser", this.usuario.codigoUser);
-    formData.append("idUser", this.usuario.id.toString());
-
-    this.service.setDocumento(formData);
-    console.log('ANTES_DE_:', this.hdvCodigoUsuario)
-    this.hdvCodigoUsuario = '';
-    console.log('ANTES_DE_:', this.resume.codigoDocumento)
-    this.resume.codigoDocumento = '';
-    setTimeout(() => {
-      this.ngOnInit();
-      //console.log('Page reload!!');
-    }, 3000);//1000ms=1Sec
-  }
   //Métodos a usar
   addExperience() {
     this.resume.experiences.push(new Experience());
@@ -482,15 +449,68 @@ export class HojaDeVidaComponent implements OnInit {
   addEducation() {
     this.resume.educations.push(new Education());
   }
-  /*   generatePdf(action = 'open') {
-      const documentDefinition = this.getDocumentDefinition();
-      switch (action) {
-        case 'open': pdfMake.createPdf(documentDefinition).open(); break;
-        case 'print': pdfMake.createPdf(documentDefinition).print(); break;
-        case 'download': pdfMake.createPdf(documentDefinition).download(); break;
-        default: pdfMake.createPdf(documentDefinition).open(); break;
-      }
+  publicar() {
+    const formData = new FormData();
+    /*     const defenicionSolicitud = this.getDefinicionSolicitud();
+        const pdf = pdfMake.createPdf(defenicionSolicitud); */
+    /* const blob = new Blob([pdf], { type: 'arraybuffer' }); */
+    /* const file = new File([pdf], 'untitled.pdf', { type: 'application/pdf' });
+    var fileURL = URL.createObjectURL(blob);
+    var fileReader = new FileReader(); */
+    /*     pdf.getBlob(async(blob)=>{
+          blobPdf=blob;
+          await blobPdf;
+          console.log('PDF_TO_BLOB_: ',blob);
+        }) */
+    /* fileReader.readAsDataURL(blobPdf);
+    fileReader.onloadend = () => {
+    pdf.file = fileReader.result;
+    console.log('Pdf and fileReader_: ',pdf.file,fileReader);
     } */
+    //window.open(fileURL);
+    /*     console.log('metodo_obtenerPdf()_:',pdf);
+        //alert(pdf);
+        for (const key in pdf) {
+            const element = pdf[key];
+            for (const k in element) {
+              const e = element[k];
+              console.log('PDF_: ',e);
+    
+            }
+    
+        } */
+    const file = new File([this.blobPdf], 'doc.pdf', { type: 'application/pdf' });
+    //console.log('Antes_del_Append_file_: ',file,'document.pdf');
+
+    formData.append("upload", file);
+    formData.append("codDoc", this.hdvCodigoUsuario);
+    formData.append("codUser", this.usuario.codigoUser);
+    formData.append("idUser", this.usuario.id.toString());
+
+    this.service.setDocumento(formData);
+    //console.log('ANTES_DE_:', this.solicitudCodigoDocumento)
+    this.hdvCodigoUsuario = '';
+    //console.log('ANTES_DE_:', this.solicitud.codigoDocumento)
+    this.resume.codigoDocumento = '';
+    setTimeout(() => {
+      this.ngOnInit();
+      //console.log('Page reload!!');
+    }, 5000);//1000ms=1Sec
+  }
+  publicarEditado() {
+    alertify.notify('Publicado con éxito!','success',4);
+  }
+  cancelarEdicion() {
+    localStorage.removeItem('currentDoc');
+    this.ngOnInit();
+    alertify.notify('De vuelta en el Visualizador!','success',10);
+  }
+  backToHome() {
+    localStorage.removeItem('currentDoc');
+    this.router.navigate(["/visualizador"]);
+    alertify.notify('Edición Cancelada!','error',10);
+  }
+  //Fin de Metodos Nuevos y actualizaciones!!
   resetForm() {
     this.resume = new Resume();
     sessionStorage.removeItem('hoja-de-vida');

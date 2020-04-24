@@ -41,6 +41,9 @@ export class ActasComponent implements OnInit {
   logoBj: string | ArrayBuffer;
   logo24M: string | ArrayBuffer;
   logoGrc: string | ArrayBuffer;
+  documento: any;
+  editable: boolean;
+  blobPdf: Blob;
   constructor(private formBuilder:FormBuilder,
     public datepipe:DatePipe,
     public service: ServicioService,
@@ -124,18 +127,18 @@ export class ActasComponent implements OnInit {
     }
 
     getLocalStorageData() {
-      /*localStorage*/
-      let user_string = localStorage.getItem("currentUser");
-      let user = JSON.parse(user_string);
-      var x = user;
-      //var id_usuario:number = x.id;
-      this.usuario = user;
-      this.usuario.codigoUser = x.codigo_user;
-      this.acta.idUsuario = this.usuario.id;
-      this.acta.codigoUsuario = this.usuario.codigoUser;
-      //console.log(this.usuario.id, this.usuario.codigoUser);
-      //console.log('user_string_:', user_string);
-      console.log('usuario.id_:', this.usuario);
+    /*localStorage*/
+    let user_string = localStorage.getItem("currentUser");
+    let user = JSON.parse(user_string);
+    var x = user;
+    //var id_usuario:number = x.id;
+    this.usuario = user;
+    this.usuario.codigoUser = x.codigo_user;
+    this.acta.idUsuario = this.usuario.id;
+    this.acta.codigoUsuario = this.usuario.codigoUser;
+    let doc_string = localStorage.getItem("currentDoc");
+    let doc = JSON.parse(doc_string);
+    this.documento = doc;
   
     }
     obtenerFecha() {
@@ -436,88 +439,7 @@ export class ActasComponent implements OnInit {
     guardarBorrador(){
       sessionStorage.setItem('solicitud-titulacion', JSON.stringify(this.acta));
     }
-    publicarEnGedi() {
-      /////PUBLICAR COMO INVITADO/////
-      if (this.invitado.includes('si')) {
-        Swal.fire({
-          title: this.usuario.name + ' publicarás como invitado',
-          text: "Este documento solo lo podrás visualizar tú y los cargos administrativos",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'Si, Publicar!',
-          cancelButtonText: 'Cancelar!',
-          timer: 5000,
-          timerProgressBar: true,
-        }).then((result) => {
-          if (result.value) {
-            this.publicar();
-            //console.log('VALUE_DATA_Invitado:',a,c);
-            Swal.fire(
-              'Publicado!',
-              'Tu documento ha sido publicado en GEDI como invitado.',
-              'success'
-            )
-          }
-        })
   
-      }
-      /////PUBLICAR COMO USUARIO GEDI/////
-      if (this.invitado.includes('no')) {
-        //alert('ERES USUARIO DE GEDI!');
-        Swal.fire({
-          title: this.usuario.name + ' vas a publicar en GEDI',
-          html: "Si publicas tu documento estará disponible para ti y otros usuarios en la pestaña <b>Visualizador</b>",
-          icon: 'info',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'Si, Publicar!',
-          cancelButtonText: 'Cancelar!',
-          timer: 5000,
-          timerProgressBar: true,
-        }).then((result) => {
-          if (result.value) {
-            this.publicar();
-            Swal.fire(
-              'EXCELENTE!',
-              this.usuario.name + ' Tu documento ha sido publicado en GEDI.',
-              'success'
-            )
-            alertify.notify('Publicado con éxito!', 'success', 2);
-          } else {
-            alertify.notify('Cancelado!', 'error', 2);
-          }
-        })
-      }
-    }
-    visualizarPdf(){
-      const defenicionSolicitud = this.getDocumentDefinition();
-      const pdf:Object = pdfMake.createPdf(defenicionSolicitud).open();
-      console.log('visualizarPdf()_: ',pdf);
-    }
-    publicar() {
-      const formData = new FormData();
-      const defenicionSolicitud = this.getDocumentDefinition();
-      const pdf = pdfMake.createPdf(defenicionSolicitud);
-      const blob = new Blob([pdf], { type: 'application/octet-stream' });
-      //console.log('metodo_obtenerPdf()_:', blob);
-      formData.append("upload", blob);
-      formData.append("codDoc", this.actaCodigoUsuario);
-      formData.append("codUser", this.usuario.codigoUser);
-      formData.append("idUser", this.usuario.id.toString());
-  
-      this.service.setDocumento(formData);
-      console.log('ANTES_DE_:', this.actaCodigoUsuario)
-      this.actaCodigoUsuario = '';
-      console.log('ANTES_DE_:', this.acta.codigoDocumento)
-      this.acta.codigoDocumento = '';
-      setTimeout(() => {
-        this.ngOnInit();
-        //console.log('Page reload!!');
-      }, 3000);//1000ms=1Sec
-    }
 obtenerFechaS(){
   this.dateS=new Date()
   this.dateS=this.datepipe.transform(this.dateS,'yyyy')
@@ -526,6 +448,139 @@ obtenerFechaS(){
     this.acta.ordenDelDia.push(new Orden())
   }
 
+  publicarEnGedi() {
+    const defenicionSolicitud = this.getDocumentDefinition();
+    const pdf = pdfMake.createPdf(defenicionSolicitud);
+    pdf.getBlob(async (blob) => {
+      this.blobPdf = blob;
+      await this.blobPdf;
+      //console.log('PDF_TO_BLOB_: ',this.blobPdf);
+    })
+    /////PUBLICAR COMO INVITADO/////
+    console.log(this.invitado);
+    if (this.invitado.includes('si')) {
+      Swal.fire({
+        title: this.usuario.name + ' publicarás como invitado',
+        text: "Este documento solo lo podrás visualizar tú y los cargos administrativos",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Si, Publicar!',
+        cancelButtonText: 'Cancelar!',
+        timer: 5000,
+        timerProgressBar: true,
+      }).then((result) => {
+        if (result.value) {
+          this.publicar();
+          //console.log('VALUE_DATA_Invitado:',a,c);
+          Swal.fire(
+            'Publicado!',
+            'Tu documento ha sido publicado en GEDI como invitado.',
+            'success'
+          )
+        }
+      })
+
+    }
+    /////PUBLICAR COMO USUARIO GEDI/////
+    if (this.invitado.includes('no')) {
+      //alert('ERES USUARIO DE GEDI!');
+      Swal.fire({
+        title: this.usuario.name + ' vas a publicar en GEDI',
+        html: "Si publicas tu documento estará disponible para ti y otros usuarios en la pestaña <b>Visualizador</b>",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Si, Publicar!',
+        cancelButtonText: 'Cancelar!',
+        timer: 5000,
+        timerProgressBar: true,
+      }).then((result) => {
+        if (result.value) {
+          this.publicar();
+          Swal.fire(
+            'EXCELENTE!',
+            this.usuario.name + ' Tu documento ha sido publicado en GEDI.',
+            'success'
+          )
+          alertify.notify('Publicado con éxito!', 'success', 2);
+        } else {
+          alertify.notify('Cancelado!', 'error', 2);
+        }
+      })
+    }
+  }
+
+  /*  visualizarPdf(){
+    const defenicionSolicitud = this.getDefinicionSolicitud();
+    const pdf:Object = pdfMake.createPdf(defenicionSolicitud).open();
+    console.log('visualizarPdf()_: ',pdf);
+  }  */
+ 
+  publicar() {
+    const formData = new FormData();
+    /*     const defenicionSolicitud = this.getDefinicionSolicitud();
+        const pdf = pdfMake.createPdf(defenicionSolicitud); */
+    /* const blob = new Blob([pdf], { type: 'arraybuffer' }); */
+    /* const file = new File([pdf], 'untitled.pdf', { type: 'application/pdf' });
+    var fileURL = URL.createObjectURL(blob);
+    var fileReader = new FileReader(); */
+    /*     pdf.getBlob(async(blob)=>{
+          blobPdf=blob;
+          await blobPdf;
+          console.log('PDF_TO_BLOB_: ',blob);
+        }) */
+    /* fileReader.readAsDataURL(blobPdf);
+    fileReader.onloadend = () => {
+    pdf.file = fileReader.result;
+    console.log('Pdf and fileReader_: ',pdf.file,fileReader);
+    } */
+    //window.open(fileURL);
+    /*     console.log('metodo_obtenerPdf()_:',pdf);
+        //alert(pdf);
+        for (const key in pdf) {
+            const element = pdf[key];
+            for (const k in element) {
+              const e = element[k];
+              console.log('PDF_: ',e);
+    
+            }
+    
+        } */
+    const file = new File([this.blobPdf], 'doc.pdf', { type: 'application/pdf' });
+    //console.log('Antes_del_Append_file_: ',file,'document.pdf');
+
+    formData.append("upload", file);
+    formData.append("codDoc", this.actaCodigoUsuario);
+    formData.append("codUser", this.usuario.codigoUser);
+    formData.append("idUser", this.usuario.id.toString());
+
+    this.service.setDocumento(formData);
+    //console.log('ANTES_DE_:', this.solicitudCodigoDocumento)
+    this.actaCodigoUsuario = '';
+    //console.log('ANTES_DE_:', this.solicitud.codigoDocumento)
+    this.acta.codigoDocumento = '';
+    setTimeout(() => {
+      this.ngOnInit();
+      //console.log('Page reload!!');
+    }, 5000);//1000ms=1Sec
+  }
+  publicarEditado() {
+    alertify.notify('Publicado con éxito!','success',4);
+  }
+  cancelarEdicion() {
+    localStorage.removeItem('currentDoc');
+    this.ngOnInit();
+    alertify.notify('De vuelta en el Visualizador!','success',10);
+  }
+  backToHome() {
+    localStorage.removeItem('currentDoc');
+    this.router.navigate(["/visualizador"]);
+    alertify.notify('Edición Cancelada!','error',10);
+  }
+  //Fin de Metodos Nuevos y actualizaciones!!
   resetForm() {
     this.acta = new Actas();
     sessionStorage.removeItem('acta');

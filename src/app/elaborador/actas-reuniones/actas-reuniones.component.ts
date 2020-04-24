@@ -9,6 +9,7 @@ import { FormBuilder } from '@angular/forms';
 import { UserData } from 'src/app/models/userData';
 import pdfFonts from 'pdfmake/build/vfs_fonts'
 import Swal from 'sweetalert2/dist/sweetalert2.js';
+import { Actas } from 'src/app/models/actas';
 declare let alertify: any;
 pdfMake.vfs=pdfFonts.pdfMake.vfs
 @Component({
@@ -45,6 +46,10 @@ export class ActasReunionesComponent implements OnInit {
   logoBj: string | ArrayBuffer;
   logo24M: string | ArrayBuffer;
   logoGrc: string | ArrayBuffer;
+  documento: any;
+  editable: boolean;
+  blobPdf: Blob;
+  router: any;
   constructor(private formBuilder:FormBuilder
     ,public datepipe: DatePipe,
     public service: ServicioService,
@@ -454,13 +459,56 @@ export class ActasReunionesComponent implements OnInit {
   guardarBorrador(){
     sessionStorage.setItem('solicitud-titulacion', JSON.stringify(this.reunion));
   }
-  visualizarPdf(){
-    const defenicionSolicitud = this.getDocumentDefinition();
-    const pdf:Object = pdfMake.createPdf(defenicionSolicitud).open();
-    console.log('visualizarPdf()_: ',pdf);
+
+  selectCoordinador(item) {
+      this.reunion.coordinador = item.name
   }
+
+  selectSecretaria(item) {
+      this.reunion.secretaria = item.name
+  }
+
+  selectInvolucrados(item) {
+    this.listaInvolucrados.push(item)
+    console.log('listaInvolucrados_:',this.listaInvolucrados)
+  }
+
+  selectRevisado(item){
+    this.reunion.revisado = item.name 
+  }
+
+  selectAprobadoUno(item){
+    this.reunion.aprobadoUno = item.name
+  }
+
+  selectAprobadoDos(item){
+    this.reunion.aprobadoDos = item.name
+  }
+  selectAprobadoTres(item){
+    this.reunion.aprobadoTres = item.name
+  }
+  selectAprobadoCuatro(item){
+    this.reunion.aprobadoCuatro = item.name
+  }
+
+  agregarOrden () {
+    this.reunion.ordenDelDia.push(new Orden())
+  }
+
+  agregarInvolucrados () {
+    this.reunion.involucrados.push(new Docentes())
+  }
+
   publicarEnGedi() {
+    const defenicionSolicitud = this. getDocumentDefinition();
+    const pdf = pdfMake.createPdf(defenicionSolicitud);
+    pdf.getBlob(async (blob) => {
+      this.blobPdf = blob;
+      await this.blobPdf;
+      //console.log('PDF_TO_BLOB_: ',this.blobPdf);
+    })
     /////PUBLICAR COMO INVITADO/////
+    console.log(this.invitado);
     if (this.invitado.includes('si')) {
       Swal.fire({
         title: this.usuario.name + ' publicarás como invitado',
@@ -515,81 +563,78 @@ export class ActasReunionesComponent implements OnInit {
       })
     }
   }
-  /*  generarPdf(accion = 'open') {
-     const defenicionSolicitud = this.getDefinicionSolicitud();
-     switch (accion) {
-       case 'open': pdfMake.createPdf(defenicionSolicitud).open(); break;
-       case 'print': pdfMake.createPdf(defenicionSolicitud).print(); break;
-       case 'download': pdfMake.createPdf(defenicionSolicitud).download(); break;
-       default: pdfMake.createPdf(defenicionSolicitud).open(); break
-     }
+
+  /*  visualizarPdf(){
+    const defenicionSolicitud = this.getDefinicionSolicitud();
+    const pdf:Object = pdfMake.createPdf(defenicionSolicitud).open();
+    console.log('visualizarPdf()_: ',pdf);
+  }  */
  
-   } */
   publicar() {
     const formData = new FormData();
-    const defenicionSolicitud = this.getDocumentDefinition();
-    const pdf = pdfMake.createPdf(defenicionSolicitud);
-    const blob = new Blob([pdf], { type: 'application/octet-stream' });
-    //console.log('metodo_obtenerPdf()_:', blob);
-    formData.append("upload", blob);
+    /*     const defenicionSolicitud = this.getDefinicionSolicitud();
+        const pdf = pdfMake.createPdf(defenicionSolicitud); */
+    /* const blob = new Blob([pdf], { type: 'arraybuffer' }); */
+    /* const file = new File([pdf], 'untitled.pdf', { type: 'application/pdf' });
+    var fileURL = URL.createObjectURL(blob);
+    var fileReader = new FileReader(); */
+    /*     pdf.getBlob(async(blob)=>{
+          blobPdf=blob;
+          await blobPdf;
+          console.log('PDF_TO_BLOB_: ',blob);
+        }) */
+    /* fileReader.readAsDataURL(blobPdf);
+    fileReader.onloadend = () => {
+    pdf.file = fileReader.result;
+    console.log('Pdf and fileReader_: ',pdf.file,fileReader);
+    } */
+    //window.open(fileURL);
+    /*     console.log('metodo_obtenerPdf()_:',pdf);
+        //alert(pdf);
+        for (const key in pdf) {
+            const element = pdf[key];
+            for (const k in element) {
+              const e = element[k];
+              console.log('PDF_: ',e);
+    
+            }
+    
+        } */
+    const file = new File([this.blobPdf], 'doc.pdf', { type: 'application/pdf' });
+    //console.log('Antes_del_Append_file_: ',file,'document.pdf');
+
+    formData.append("upload", file);
     formData.append("codDoc", this.actaReunionesCodigoUsuario);
     formData.append("codUser", this.usuario.codigoUser);
     formData.append("idUser", this.usuario.id.toString());
 
     this.service.setDocumento(formData);
-    console.log('ANTES_DE_:', this.actaReunionesCodigoUsuario)
+    //console.log('ANTES_DE_:', this.solicitudCodigoDocumento)
     this.actaReunionesCodigoUsuario = '';
-    console.log('ANTES_DE_:', this.reunion.codigoDocumento)
+    //console.log('ANTES_DE_:', this.solicitud.codigoDocumento)
     this.reunion.codigoDocumento = '';
     setTimeout(() => {
       this.ngOnInit();
       //console.log('Page reload!!');
-    }, 3000);//1000ms=1Sec
+    }, 5000);//1000ms=1Sec
   }
-
-  selectCoordinador(item) {
-      this.reunion.coordinador = item.name
+  publicarEditado() {
+    alertify.notify('Publicado con éxito!','success',4);
   }
-
-  selectSecretaria(item) {
-      this.reunion.secretaria = item.name
+  cancelarEdicion() {
+    localStorage.removeItem('currentDoc');
+    this.ngOnInit();
+    alertify.notify('De vuelta en el Visualizador!','success',10);
   }
-
-  selectInvolucrados(item) {
-    this.listaInvolucrados.push(item)
-    console.log('listaInvolucrados_:',this.listaInvolucrados)
+  backToHome() {
+    localStorage.removeItem('currentDoc');
+    this.router.navigate(["/visualizador"]);
+    alertify.notify('Edición Cancelada!','error',10);
   }
-
-  selectRevisado(item){
-    this.reunion.revisado = item.name 
-  }
-
-  selectAprobadoUno(item){
-    this.reunion.aprobadoUno = item.name
-  }
-
-  selectAprobadoDos(item){
-    this.reunion.aprobadoDos = item.name
-  }
-  selectAprobadoTres(item){
-    this.reunion.aprobadoTres = item.name
-  }
-  selectAprobadoCuatro(item){
-    this.reunion.aprobadoCuatro = item.name
-  }
-
-  agregarOrden () {
-    this.reunion.ordenDelDia.push(new Orden())
-  }
-
-  agregarInvolucrados () {
-    this.reunion.involucrados.push(new Docentes())
-  }
-
-  resetForm() {
+  //Fin de Metodos Nuevos y actualizaciones!!
+  resetearForm() {
     this.reunion = new ActasReuniones();
-    sessionStorage.removeItem('acta-reunion');
-    this.listaInvolucrados = []
+    sessionStorage.removeItem('solicitud-titulacion');
   }
 
   getDocumentDefinition() {

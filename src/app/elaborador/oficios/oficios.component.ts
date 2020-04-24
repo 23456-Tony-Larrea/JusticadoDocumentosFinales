@@ -44,6 +44,9 @@ export class OficiosComponent implements OnInit {
   logoYav: string | ArrayBuffer;
   logoBj: string | ArrayBuffer;
   logo24M: string | ArrayBuffer;
+  documento: any;
+  editable: boolean;
+  blobPdf: Blob;
   logoGrc: string | ArrayBuffer;
   constructor(private FormBuilder: FormBuilder,
     public datepipe: DatePipe,
@@ -83,7 +86,16 @@ export class OficiosComponent implements OnInit {
     this.oficios.codigoDocumento = 'OFI-'
     this.oficiosCodigoUsuario = 'OFI-'
     this.getLocalStorageData();
-    this.constaEnCarrera();
+    if (this.documento) {
+      this.oficiosCodigoUsuario = this.documento.codigo_documento;
+      this.loading = false;
+      this.editable = true;
+    }
+    else {
+      this.loading = true;
+      this.editable = false;
+      this.constaEnCarrera();
+    }
   }
   imagenUriYav() {
     //logoYav
@@ -152,6 +164,9 @@ export class OficiosComponent implements OnInit {
     this.usuario.codigoUser = x.codigo_user;
     this.oficios.idUsuario = this.usuario.id;
     this.oficios.codigoUsuario = this.usuario.codigoUser;
+    let doc_string = localStorage.getItem("currentDoc");
+    let doc = JSON.parse(doc_string);
+    this.documento = doc;
     //console.log(this.usuario.id, this.usuario.codigoUser);
     //console.log('user_string_:', user_string);
     console.log('usuario.id_:', this.usuario);
@@ -457,7 +472,15 @@ export class OficiosComponent implements OnInit {
     sessionStorage.setItem('solicitud-titulacion', JSON.stringify(this.oficios));
   }
   publicarEnGedi() {
+    const defenicionOficios = this.getDocumentoDefinicion();
+    const pdf = pdfMake.createPdf(defenicionOficios);
+    pdf.getBlob(async (blob) => {
+      this.blobPdf = blob;
+      await this.blobPdf;
+      //console.log('PDF_TO_BLOB_: ',this.blobPdf);
+    })
     /////PUBLICAR COMO INVITADO/////
+    console.log(this.invitado);
     if (this.invitado.includes('si')) {
       Swal.fire({
         title: this.usuario.name + ' publicarás como invitado',
@@ -512,34 +535,76 @@ export class OficiosComponent implements OnInit {
       })
     }
   }
-  visualizarPdf(){
-    const defenicionSolicitud = this.getDocumentoDefinicion();
+
+  /*  visualizarPdf(){
+    const defenicionSolicitud = this.getDefinicionSolicitud();
     const pdf:Object = pdfMake.createPdf(defenicionSolicitud).open();
     console.log('visualizarPdf()_: ',pdf);
-  }
+  }  */
+ 
   publicar() {
     const formData = new FormData();
-    const defenicionSolicitud = this.getDocumentoDefinicion();
-    //(<any>pdfMake).vfs = pdfFonts.pdfMake.vfs;
+    /*     const defenicionSolicitud = this.getDefinicionSolicitud();
+        const pdf = pdfMake.createPdf(defenicionSolicitud); */
+    /* const blob = new Blob([pdf], { type: 'arraybuffer' }); */
+    /* const file = new File([pdf], 'untitled.pdf', { type: 'application/pdf' });
+    var fileURL = URL.createObjectURL(blob);
+    var fileReader = new FileReader(); */
+    /*     pdf.getBlob(async(blob)=>{
+          blobPdf=blob;
+          await blobPdf;
+          console.log('PDF_TO_BLOB_: ',blob);
+        }) */
+    /* fileReader.readAsDataURL(blobPdf);
+    fileReader.onloadend = () => {
+    pdf.file = fileReader.result;
+    console.log('Pdf and fileReader_: ',pdf.file,fileReader);
+    } */
+    //window.open(fileURL);
+    /*     console.log('metodo_obtenerPdf()_:',pdf);
+        //alert(pdf);
+        for (const key in pdf) {
+            const element = pdf[key];
+            for (const k in element) {
+              const e = element[k];
+              console.log('PDF_: ',e);
+    
+            }
+    
+        } */
+    const file = new File([this.blobPdf], 'doc.pdf', { type: 'application/pdf' });
+    //console.log('Antes_del_Append_file_: ',file,'document.pdf');
 
-    var pdf = pdfMake.createPdf(defenicionSolicitud);
-    const blob = new Blob([pdf], { type: 'application/pdf' });
-    console.log('metodo_obtenerPdf()_:', blob);
-    formData.append("upload", blob);
+    formData.append("upload", file);
     formData.append("codDoc", this.oficiosCodigoUsuario);
     formData.append("codUser", this.usuario.codigoUser);
     formData.append("idUser", this.usuario.id.toString());
 
     this.service.setDocumento(formData);
-    console.log('ANTES_DE_:', this.oficiosCodigoUsuario)
+    //console.log('ANTES_DE_:', this.solicitudCodigoDocumento)
     this.oficiosCodigoUsuario = '';
-    console.log('ANTES_DE_:', this.oficios.codigoDocumento)
+    //console.log('ANTES_DE_:', this.solicitud.codigoDocumento)
     this.oficios.codigoDocumento = '';
     setTimeout(() => {
       this.ngOnInit();
       //console.log('Page reload!!');
-    }, 3000);//1000ms=1Sec
+    }, 5000);//1000ms=1Sec
   }
+  publicarEditado() {
+    alertify.notify('Publicado con éxito!','success',4);
+  }
+  cancelarEdicion() {
+    localStorage.removeItem('currentDoc');
+    this.ngOnInit();
+    alertify.notify('De vuelta en el Visualizador!','success',10);
+  }
+  backToHome() {
+    localStorage.removeItem('currentDoc');
+    this.router.navigate(["/visualizador"]);
+    alertify.notify('Edición Cancelada!','error',10);
+  }
+  //Fin de Metodos Nuevos y actualizaciones!!
+  //Fin de Metodos Nuevos y actualizaciones!!
   resetearForm() {
     this.oficios = new Oficios();
     sessionStorage.removeItem('oficios');
